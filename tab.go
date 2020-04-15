@@ -22,10 +22,9 @@ var HandleTabEvent = func(tab *Tab, method string, params json.RawMessage) error
 }
 
 // Tab command channel
-// For now, a single tab is expected to handle one command at a time
 type Tab struct {
 	send       chan []byte
-	recv       chan []byte
+	returns    map[int]chan []byte
 	closed     chan struct{}
 	connection tabConnectionInfo
 	rw         sync.RWMutex
@@ -58,13 +57,14 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 
 	tab := &Tab{
 		send:       make(chan []byte),
-		recv:       make(chan []byte),
+		returns:    make(map[int]chan []byte),
 		closed:     make(chan struct{}),
 		connection: tci,
 	}
 
 	// response from chrome
 	type resChrome struct {
+		ID int
 		// call response
 		Result json.RawMessage
 		// event
@@ -95,7 +95,7 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 		defer close(done)
 		for {
 			_, data, err := conn.ReadMessage()
-			Log("got: %s", data)
+			// Log("got: %s", data)
 			if err != nil {
 				Log("closed: %s", err)
 				return
@@ -127,9 +127,11 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 			default:
 				if err := HandleTabEvent(tab, msg.Method, msg.Params); err != nil {
 					// event was not handled so send return
+					ch := tab.getReq(msg.ID)
+					// Log("[%d] channel (%+v)", msg.ID, ch)
 					select {
-					case tab.recv <- msg.Result:
-						Log("result: %s", msg.Result)
+					case ch <- msg.Result:
+						// Log("result: %s", msg.Result)
 					case <-time.After(500 * time.Millisecond):
 						Log("result: timeout")
 					}
@@ -168,9 +170,9 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 
 // SendCommand builds a command and sends it
 // { "id": 0, "method": "Page.navigate", params: {"url": "..."} }
-func (t *Tab) SendCommand(args map[string]interface{}) {
+func (t *Tab) SendCommand(args map[string]interface{}) chan []byte {
 	// build command
-	id := t.addReq()
+	id, ch := t.addReq()
 	args["id"] = id
 	data, err := json.Marshal(args)
 	if err != nil {
@@ -184,6 +186,8 @@ func (t *Tab) SendCommand(args map[string]interface{}) {
 	case <-time.After(500 * time.Millisecond):
 		Log("send: timeout")
 	}
+
+	return ch
 }
 
 // ID gives the tab id
@@ -191,9 +195,23 @@ func (t *Tab) ID() string {
 	return t.connection.ID
 }
 
-func (t *Tab) addReq() int {
+func (t *Tab) addReq() (int, chan []byte) {
 	t.rw.Lock()
 	defer t.rw.Unlock()
 	t.nextReqID++
-	return t.nextReqID
+
+	// make return channel
+	ch := make(chan []byte)
+	t.returns[t.nextReqID] = ch
+	// Log("new [%d] channel (%+v)", t.nextReqID, ch)
+
+	return t.nextReqID, ch
+}
+
+func (t *Tab) getReq(id int) chan []byte {
+	t.rw.Lock()
+	defer t.rw.Unlock()
+	ch := t.returns[id]
+	delete(t.returns, id)
+	return ch
 }

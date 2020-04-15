@@ -167,13 +167,13 @@ func (t *Tab) {{.Name}}({{range $ndx, $p := .Parameters}}{{if $ndx}}, {{end}}{{$
 	{{ end }}
 	{{ end }}
 
-	t.SendCommand(map[string]interface{}{
+	ch := t.SendCommand(map[string]interface{}{
 		"method": "{{.Method}}",
 		"params": params_,
 	})
 
 	var returns_ {{.Name}}Returns
-	data_ := <-t.recv
+	data_ := <-ch
 	err_ := json.Unmarshal(data_, &returns_)
 	if err_ != nil {
 		return returns_, fmt.Errorf("json.Unmarshal: %w", err_)
