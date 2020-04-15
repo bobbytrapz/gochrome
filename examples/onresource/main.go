@@ -32,7 +32,6 @@ func main() {
 
 	defer browser.Wait()
 
-	tab.NetworkEnable(0, 0, 0)
 	type netResponse struct {
 		Response gochrome.NetworkResponse
 	}
