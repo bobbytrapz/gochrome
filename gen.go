@@ -210,7 +210,7 @@ func init() {
 				return err
 			}
 			if TabEventHandlers.On{{.Name | Title}} != nil {
-				TabEventHandlers.On{{.Name | Title}}(tab, ev)
+				go TabEventHandlers.On{{.Name | Title}}(tab, ev)
 			}
 	{{ end }}
 		default:
