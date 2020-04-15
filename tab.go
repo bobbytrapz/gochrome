@@ -2,6 +2,7 @@ package gochrome
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,6 +12,14 @@ import (
 
 // WaitForTabConnect decides how long we wait to connect to a tab
 var WaitForTabConnect = 10 * time.Second
+
+var errEventNotHandled = errors.New("Event was not handled")
+
+// HandleTabEvent dispatches events to handlers
+// is set in protocol.go
+var HandleTabEvent = func(tab *Tab, method string, params json.RawMessage) error {
+	return errEventNotHandled
+}
 
 // Tab command channel
 // For now, a single tab is expected to handle one command at a time
@@ -116,11 +125,14 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 				Log("Inspector.detached: ev: %+v", ev)
 				close(tab.closed)
 			default:
-				select {
-				case tab.recv <- msg.Result:
-					Log("result: %s", msg.Result)
-				case <-time.After(500 * time.Millisecond):
-					Log("result: timeout")
+				if err := HandleTabEvent(tab, msg.Method, msg.Params); err != nil {
+					// event was not handled so send return
+					select {
+					case tab.recv <- msg.Result:
+						Log("result: %s", msg.Result)
+					case <-time.After(500 * time.Millisecond):
+						Log("result: timeout")
+					}
 				}
 			}
 		}

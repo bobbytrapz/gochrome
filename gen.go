@@ -84,9 +84,10 @@ func main() {
 		// domain events
 		for _, e := range domain.Events {
 			data.Events = append(data.Events, gochrome.Event{
-				Name:        e.Name,
+				Name:        fmt.Sprintf("%s%s", strings.Title(domain.Domain), strings.Title(e.Name)),
 				Description: e.Description,
 				Parameters:  cleanParameters(domain, e.Parameters, strings.Title(e.Name)),
+				EventName:   fmt.Sprintf("%s.%s", strings.Title(domain.Domain), e.Name),
 			})
 
 			// fmt.Fprintf(os.Stderr, "%+v\n", data.Events[len(data.Events)-1])
@@ -98,7 +99,7 @@ func main() {
 	if true {
 		ioutil.WriteFile("protocol.go", buf.Bytes(), 0664)
 	} else {
-		// fmt.Fprintf(os.Stderr, "%s", buf.Bytes())
+		fmt.Fprintf(os.Stderr, "%s", buf.Bytes())
 	}
 }
 
@@ -181,6 +182,43 @@ func (t *Tab) {{.Name}}({{range $ndx, $p := .Parameters}}{{if $ndx}}, {{end}}{{$
 	return returns_, nil
 }
 {{ end }}
+/* Event Handlers */
+{{ range .Events }}
+type {{.Name}}Event struct {
+	{{ range .Parameters }}
+	{{.Name | Title}} {{.Type}}
+	{{ end }}
+}
+type {{.Name | Title}}Handler func (tab *Tab, ev {{.Name | Title}}Event)
+{{ end }}
+var TabEventHandlers = struct {
+{{ range .Events }}
+	On{{.Name | Title}} {{.Name | Title}}Handler
+{{ end }}
+}{}
+
+func init() {
+	/* Handle Tab Events */
+	HandleTabEvent = func(tab *Tab, method string, params json.RawMessage) error {
+		switch method {
+	{{ range .Events }}
+		case "{{.EventName}}":
+			var ev {{.Name | Title}}Event
+			err := json.Unmarshal(params, &ev)
+			if err != nil {
+				Log("{{.EventName}}: %s", err)
+				return err
+			}
+			if TabEventHandlers.On{{.Name | Title}} != nil {
+				TabEventHandlers.On{{.Name | Title}}(tab, ev)
+			}
+	{{ end }}
+		default:
+			return errEventNotHandled
+		}
+		return nil
+	}
+}
 `))
 
 type protocoldata struct {
@@ -222,6 +260,9 @@ func cleanProperties(domain gochrome.Domain, props []gochrome.Property, name str
 				}
 			} else {
 				at = p.Items.Type
+				if at == "object" {
+					at = "map[string]interface{}"
+				}
 			}
 			pt = fmt.Sprintf("[]%s", at)
 		}
@@ -270,6 +311,9 @@ func cleanParameters(domain gochrome.Domain, params []gochrome.Parameter, name s
 				}
 			} else {
 				at = p.Items.Type
+				if at == "object" {
+					at = "map[string]interface{}"
+				}
 			}
 			pt = fmt.Sprintf("[]%s", at)
 		}
