@@ -15,12 +15,6 @@ var WaitForTabConnect = 10 * time.Second
 
 var errEventNotHandled = errors.New("Event was not handled")
 
-// HandleTabEvent dispatches events to handlers
-// is set in protocol.go
-var HandleTabEvent = func(tab *Tab, method string, params json.RawMessage) error {
-	return errEventNotHandled
-}
-
 // Tab command channel
 type Tab struct {
 	send       chan []byte
@@ -29,7 +23,14 @@ type Tab struct {
 	connection tabConnectionInfo
 	rw         sync.RWMutex
 	nextReqID  int
+	Events     tabEventHandlers
 }
+
+/*
+func (t *Tab) HandleEvent(method string, params json.RawMessage) error {
+	return errEventNotHandled
+}
+*/
 
 // response from /json and /json/new
 type tabConnectionInfo struct {
@@ -125,7 +126,7 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 				Log("Inspector.detached: ev: %+v", ev)
 				close(tab.closed)
 			default:
-				if err := HandleTabEvent(tab, msg.Method, msg.Params); err != nil {
+				if err := tab.HandleEvent(msg.Method, msg.Params); err != nil {
 					// event was not handled so send return
 					ch := tab.getReq(msg.ID)
 					// Log("[%d] channel (%+v)", msg.ID, ch)

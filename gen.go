@@ -189,36 +189,34 @@ type {{.Name}}Event struct {
 	{{.Name | Title}} {{.Type}}
 	{{ end }}
 }
-type {{.Name | Title}}Handler func (tab *Tab, ev {{.Name | Title}}Event)
+type {{.Name | Title}}Handler func (ev {{.Name | Title}}Event)
 {{ end }}
-var TabEventHandlers = struct {
+/* Handle Tab Events */
+type tabEventHandlers struct {
 {{ range .Events }}
 	On{{.Name | Title}} {{.Name | Title}}Handler
 {{ end }}
-}{}
-
-func init() {
-	/* Handle Tab Events */
-	HandleTabEvent = func(tab *Tab, method string, params json.RawMessage) error {
-		switch method {
-	{{ range .Events }}
-		case "{{.EventName}}":
-			var ev {{.Name | Title}}Event
-			err := json.Unmarshal(params, &ev)
-			if err != nil {
-				Log("{{.EventName}}: %s", err)
-				return err
-			}
-			if TabEventHandlers.On{{.Name | Title}} != nil {
-				go TabEventHandlers.On{{.Name | Title}}(tab, ev)
-			}
-	{{ end }}
-		default:
-			return errEventNotHandled
-		}
-		return nil
-	}
 }
+func (t *Tab) HandleEvent(method string, params json.RawMessage) error {
+	switch method {
+{{ range .Events }}
+	case "{{.EventName}}":
+		var ev {{.Name | Title}}Event
+		err := json.Unmarshal(params, &ev)
+		if err != nil {
+			Log("{{.EventName}}: %s", err)
+			return err
+		}
+		if t.Events.On{{.Name | Title}} != nil {
+			go t.Events.On{{.Name | Title}}(ev)
+		}
+{{ end }}
+	default:
+		return errEventNotHandled
+	}
+	return nil
+}
+
 `))
 
 type protocoldata struct {
