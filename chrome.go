@@ -49,8 +49,9 @@ type Command struct {
 
 // Event from protocol
 type Event struct {
-	Name       string
-	Parameters []Parameter
+	Name        string
+	Description string
+	Parameters  []Parameter
 }
 
 // Parameter from protocol
