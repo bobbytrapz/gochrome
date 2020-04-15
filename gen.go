@@ -115,8 +115,8 @@ var typeReplacer = strings.NewReplacer(
 )
 
 var nameReplacer = strings.NewReplacer(
-	"range", "_range",
-	"type", "_type",
+	"range", "Range",
+	"type", "Type",
 )
 
 var funcMap = template.FuncMap{
