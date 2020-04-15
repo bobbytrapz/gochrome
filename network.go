@@ -70,6 +70,12 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 		defer m.Unlock()
 		resources[id] = res
 	}
+	get := func(id NetworkRequestId) (HTTPResource, bool) {
+		m.Lock()
+		defer m.Unlock()
+		res, ok := resources[id]
+		return res, ok
+	}
 	del := func(id NetworkRequestId) {
 		m.Lock()
 		defer m.Unlock()
@@ -90,7 +96,7 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 
 	t.Events.OnNetworkLoadingFinished = func(ev NetworkLoadingFinishedEvent) {
 		// fmt.Printf("Loaded: %s\n", ev.RequestId)
-		if r, ok := resources[ev.RequestId]; ok {
+		if r, ok := get(ev.RequestId); ok {
 			del(ev.RequestId)
 			body, err := t.GetResponseBody(ev.RequestId)
 			if err != nil {

@@ -198,6 +198,8 @@ type tabEventHandlers struct {
 {{ end }}
 }
 func (t *Tab) HandleEvent(method string, params json.RawMessage) error {
+	t.rw.Lock()
+	defer t.rw.Unlock()
 	switch method {
 {{ range .Events }}
 	case "{{.EventName}}":
