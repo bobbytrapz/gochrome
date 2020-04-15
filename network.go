@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 )
 
 // SetUserAgent override
@@ -104,4 +105,18 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 	}
 
 	return nil
+}
+
+// WaitForNetworkIdle blocks until network is idle for d seconds
+// relies on network events so
+// Tab.NetworkEnable should be called first
+func (t *Tab) WaitForNetworkIdle(d time.Duration) {
+	idle := time.NewTimer(d)
+	t.Events.OnNetworkDataReceived = func(ev NetworkDataReceivedEvent) {
+		idle.Reset(d)
+	}
+	select {
+	case <-idle.C:
+		t.Events.OnNetworkDataReceived = nil
+	}
 }
