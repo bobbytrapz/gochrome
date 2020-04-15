@@ -113,7 +113,9 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 func (t *Tab) WaitForNetworkIdle(d time.Duration) {
 	idle := time.NewTimer(d)
 	t.Events.OnNetworkDataReceived = func(ev NetworkDataReceivedEvent) {
-		idle.Reset(d)
+		if idle.Stop() {
+			idle.Reset(d)
+		}
 	}
 	select {
 	case <-idle.C:
