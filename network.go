@@ -49,6 +49,14 @@ type HTTPResource struct {
 // WebSocket, Manifest, SignedExchange, Ping,
 // CSPViolationReport, Other
 func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkResourceType) error {
+	if len(types) == 0 {
+		types = []NetworkResourceType{
+			"Document", "Stylesheet", "Image", "Media", "Font",
+			"Script", "TextTrack", "XHR", "Fetch", "EventSource",
+			"WebSocket", "Manifest", "SignedExchange", "Ping",
+			"CSPViolationReport", "Other",
+		}
+	}
 	_, err := t.NetworkEnable(0, 0, 0)
 	if err != nil {
 		return nil
