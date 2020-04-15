@@ -195,3 +195,14 @@ func (b *Browser) PID() int {
 	}
 	return b.cmd.Process.Pid
 }
+
+// EachTab performs a function on each open tab
+// this may not work if tabs are closed
+// may want to look into a solution here
+// users probably will not want to close tabs at all
+// except when exiting the browser
+func (b *Browser) EachTab(tabfn func(index int, tab *Tab)) {
+	for n, t := range b.tabs {
+		tabfn(n, t)
+	}
+}
