@@ -6,6 +6,8 @@ import (
 	"fmt"
 )
 
+//go:generate go run gen.go
+
 // Log function
 var Log = func(string, ...interface{}) {}
 
@@ -52,6 +54,7 @@ type Event struct {
 	Name        string
 	Description string
 	Parameters  []Parameter
+	EventName   string
 }
 
 // Parameter from protocol

@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-//go:generate go run gen.go
-
 // Browser is a single running chrome browser
 type Browser struct {
 	// flags passed into chrome
