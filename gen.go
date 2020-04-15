@@ -40,174 +40,66 @@ func main() {
 	protocol := browser.GetProtocol()
 	cancel()
 
-	fmt.Fprintf(os.Stderr, "Chrome protocol version: %s\n", protocol.VersionString())
-
 	data := protocoldata{
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Version:   protocol.VersionString(),
 	}
 
 	for _, domain := range protocol.Domains {
-		// protocol types
+		// domain types
 		for _, t := range domain.Types {
-			name := fmt.Sprintf("%s%s", domain.Domain, t.ID)
-			var props []gochrome.Property
-			for _, p := range t.Properties {
-				var pt string
-
-				if p.Ref != "" {
-					pt = p.Ref
-					if !strings.Contains(pt, ".") {
-						pt = fmt.Sprintf("%s%s", domain.Domain, pt)
-					}
-				} else {
-					pt = p.Type
-				}
-
-				if pt == "array" {
-					var at string
-					if p.Items.Ref != "" {
-						at = p.Items.Ref
-						if !strings.Contains(at, ".") {
-							at = fmt.Sprintf("%s%s", domain.Domain, at)
-						}
-					} else {
-						at = p.Items.Type
-					}
-					pt = fmt.Sprintf("[]%s", at)
-				}
-
-				if pt == "object" {
-					pt = "map[string]interface{}"
-				}
-
-				if pt == name {
-					pt = fmt.Sprintf("*%s", pt)
-				}
-
-				props = append(props, gochrome.Property{
-					Name:        nameReplacer.Replace(p.Name),
-					Description: p.Description,
-					Optional:    p.Optional,
-					Type:        typeReplacer.Replace(pt),
-				})
-			}
+			props := cleanProperties(domain, t.Properties, t.ID)
 
 			if t.Type == "object" && len(props) == 0 {
 				t.Type = "map[string]interface{}"
 			}
 
 			td := gochrome.Type{
-				ID:          name,
+				ID:          fmt.Sprintf("%s%s", domain.Domain, t.ID),
 				Type:        typeReplacer.Replace(t.Type),
 				Description: t.Description,
 				Properties:  props,
 			}
 
 			data.Types = append(data.Types, td)
+			// fmt.Fprintf(os.Stderr, "type %+v\n", td)
 		}
 
-		// protocol commands
+		// domain commands
 		for _, c := range domain.Commands {
 			var cmd gochrome.Command
 			name := fmt.Sprintf("%s%s", domain.Domain, strings.Title(c.Name))
 			cmd.Method = fmt.Sprintf("%s.%s", domain.Domain, c.Name)
-			var params []gochrome.Parameter
-			for _, p := range c.Parameters {
-				var pt string
-
-				if p.Ref != "" {
-					pt = p.Ref
-					if !strings.Contains(pt, ".") {
-						pt = fmt.Sprintf("%s%s", domain.Domain, pt)
-					}
-				} else {
-					pt = p.Type
-				}
-
-				if pt == "array" {
-					var at string
-					if p.Items.Ref != "" {
-						at = p.Items.Ref
-						if !strings.Contains(at, ".") {
-							at = fmt.Sprintf("%s%s", domain.Domain, at)
-						}
-					} else {
-						at = p.Items.Type
-					}
-					pt = fmt.Sprintf("[]%s", at)
-				}
-
-				if pt == "object" {
-					pt = "map[string]interface{}"
-				}
-
-				if pt == name {
-					pt = fmt.Sprintf("*%s", pt)
-				}
-
-				params = append(params, gochrome.Parameter{
-					Name:     nameReplacer.Replace(p.Name),
-					Type:     typeReplacer.Replace(pt),
-					Optional: p.Optional,
-				})
-			}
-
-			var returns []gochrome.Return
-			for _, p := range c.Returns {
-				var pt string
-
-				if p.Ref != "" {
-					pt = p.Ref
-					if !strings.Contains(pt, ".") {
-						pt = fmt.Sprintf("%s%s", domain.Domain, pt)
-					}
-				} else {
-					pt = p.Type
-				}
-
-				if pt == "array" {
-					var at string
-					if p.Items.Ref != "" {
-						at = p.Items.Ref
-						if !strings.Contains(at, ".") {
-							at = fmt.Sprintf("%s%s", domain.Domain, at)
-						}
-					} else {
-						at = p.Items.Type
-					}
-					pt = fmt.Sprintf("[]%s", at)
-				}
-
-				if pt == "object" {
-					pt = "map[string]interface{}"
-				}
-
-				if pt == "[]object" {
-					pt = "[]map[string]interface{}"
-				}
-
-				if pt == name {
-					pt = fmt.Sprintf("*%s", pt)
-				}
-
-				returns = append(returns, gochrome.Return{
-					Name:     nameReplacer.Replace(p.Name),
-					Type:     typeReplacer.Replace(pt),
-					Optional: p.Optional,
-				})
-			}
+			params := cleanParameters(domain, c.Parameters, strings.Title(c.Name))
+			returns := cleanReturns(domain, c.Returns, strings.Title(c.Name))
 
 			cmd.Name = name
 			cmd.Description = c.Description
 			cmd.Parameters = params
 			cmd.Returns = returns
 			data.Commands = append(data.Commands, cmd)
+			// fmt.Fprintf(os.Stderr, "cmd %+v\n", cmd)
+		}
+
+		// domain events
+		for _, e := range domain.Events {
+			data.Events = append(data.Events, gochrome.Event{
+				Name:        e.Name,
+				Description: e.Description,
+				Parameters:  cleanParameters(domain, e.Parameters, strings.Title(e.Name)),
+			})
+
+			// fmt.Fprintf(os.Stderr, "%+v\n", data.Events[len(data.Events)-1])
 		}
 	}
 
 	var buf bytes.Buffer
 	protocolTmpl.Execute(&buf, data)
-	ioutil.WriteFile("protocol.go", buf.Bytes(), 0664)
+	if true {
+		ioutil.WriteFile("protocol.go", buf.Bytes(), 0664)
+	} else {
+		// fmt.Fprintf(os.Stderr, "%s", buf.Bytes())
+	}
 }
 
 var typeReplacer = strings.NewReplacer(
@@ -231,6 +123,7 @@ var funcMap = template.FuncMap{
 }
 
 var protocolTmpl = template.Must(template.New("").Funcs(funcMap).Parse(`// Code generated by go generate; DO NOT EDIT.
+// Chrome protocol v{{ .Version }}
 // {{ .Timestamp }}
 package gochrome
 
@@ -292,6 +185,159 @@ func (t *Tab) {{.Name}}({{range $ndx, $p := .Parameters}}{{if $ndx}}, {{end}}{{$
 
 type protocoldata struct {
 	Timestamp string
+	Version   string
 	Types     []gochrome.Type
 	Commands  []gochrome.Command
+	Events    []gochrome.Event
+}
+
+// helpers
+
+// clean* helpers
+// prefix domain name to name
+// resolve $ref to actual types
+// change JavaScript types to Go types
+
+func cleanProperties(domain gochrome.Domain, props []gochrome.Property, name string) (cleaned []gochrome.Property) {
+	// prefix domain name
+	name = fmt.Sprintf("%s%s", domain.Domain, name)
+	for _, p := range props {
+		var pt string
+
+		if p.Ref != "" {
+			pt = p.Ref
+			if !strings.Contains(pt, ".") {
+				pt = fmt.Sprintf("%s%s", domain.Domain, pt)
+			}
+		} else {
+			pt = p.Type
+		}
+
+		if pt == "array" {
+			var at string
+			if p.Items.Ref != "" {
+				at = p.Items.Ref
+				if !strings.Contains(at, ".") {
+					at = fmt.Sprintf("%s%s", domain.Domain, at)
+				}
+			} else {
+				at = p.Items.Type
+			}
+			pt = fmt.Sprintf("[]%s", at)
+		}
+
+		if pt == "object" {
+			pt = "map[string]interface{}"
+		}
+
+		if pt == name {
+			pt = fmt.Sprintf("*%s", pt)
+		}
+
+		props = append(props, gochrome.Property{
+			Name:        nameReplacer.Replace(p.Name),
+			Description: p.Description,
+			Optional:    p.Optional,
+			Type:        typeReplacer.Replace(pt),
+		})
+		// fmt.Fprintf(os.Stderr, "prop %+v\n", props[len(props)-1])
+	}
+
+	return
+}
+
+func cleanParameters(domain gochrome.Domain, params []gochrome.Parameter, name string) (cleaned []gochrome.Parameter) {
+	// prefix domain name
+	name = fmt.Sprintf("%s%s", domain.Domain, name)
+	for _, p := range params {
+		var pt string
+
+		if p.Ref != "" {
+			pt = p.Ref
+			if !strings.Contains(pt, ".") {
+				pt = fmt.Sprintf("%s%s", domain.Domain, pt)
+			}
+		} else {
+			pt = p.Type
+		}
+
+		if pt == "array" {
+			var at string
+			if p.Items.Ref != "" {
+				at = p.Items.Ref
+				if !strings.Contains(at, ".") {
+					at = fmt.Sprintf("%s%s", domain.Domain, at)
+				}
+			} else {
+				at = p.Items.Type
+			}
+			pt = fmt.Sprintf("[]%s", at)
+		}
+
+		if pt == "object" {
+			pt = "map[string]interface{}"
+		}
+
+		if pt == name {
+			pt = fmt.Sprintf("*%s", pt)
+		}
+
+		cleaned = append(cleaned, gochrome.Parameter{
+			Name:     nameReplacer.Replace(p.Name),
+			Type:     typeReplacer.Replace(pt),
+			Optional: p.Optional,
+		})
+	}
+
+	return
+}
+
+func cleanReturns(domain gochrome.Domain, returns []gochrome.Return, name string) (cleaned []gochrome.Return) {
+	// prefix domain name
+	name = fmt.Sprintf("%s%s", domain.Domain, name)
+	for _, p := range returns {
+		var pt string
+
+		if p.Ref != "" {
+			pt = p.Ref
+			if !strings.Contains(pt, ".") {
+				pt = fmt.Sprintf("%s%s", domain.Domain, pt)
+			}
+		} else {
+			pt = p.Type
+		}
+
+		if pt == "array" {
+			var at string
+			if p.Items.Ref != "" {
+				at = p.Items.Ref
+				if !strings.Contains(at, ".") {
+					at = fmt.Sprintf("%s%s", domain.Domain, at)
+				}
+			} else {
+				at = p.Items.Type
+			}
+			pt = fmt.Sprintf("[]%s", at)
+		}
+
+		if pt == "object" {
+			pt = "map[string]interface{}"
+		}
+
+		if pt == "[]object" {
+			pt = "[]map[string]interface{}"
+		}
+
+		if pt == name {
+			pt = fmt.Sprintf("*%s", pt)
+		}
+
+		cleaned = append(cleaned, gochrome.Return{
+			Name:     nameReplacer.Replace(p.Name),
+			Type:     typeReplacer.Replace(pt),
+			Optional: p.Optional,
+		})
+	}
+
+	return
 }
