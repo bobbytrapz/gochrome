@@ -17,9 +17,7 @@ func main() {
 	defer cancel()
 
 	logger := log.New(os.Stderr, "gochrome: ", log.LstdFlags|log.Lshortfile)
-	if false {
-		gochrome.Log = logger.Printf
-	}
+	gochrome.Log = logger.Printf
 
 	browser := gochrome.NewBrowser()
 
