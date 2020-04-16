@@ -117,14 +117,11 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 // relies on network events so
 // Tab.NetworkEnable should be called first
 func (t *Tab) WaitForNetworkIdle(d time.Duration) {
-	idle := time.NewTimer(d)
-	t.Events.OnNetworkDataReceived = func(ev NetworkDataReceivedEvent) {
-		if idle.Stop() {
-			idle.Reset(d)
+	for {
+		select {
+		case <-t.networkDataReceived:
+		case <-time.After(d):
+			return
 		}
-	}
-	select {
-	case <-idle.C:
-		t.Events.OnNetworkDataReceived = nil
 	}
 }

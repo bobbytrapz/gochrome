@@ -17,13 +17,14 @@ var errEventNotHandled = errors.New("Event was not handled")
 
 // Tab command channel
 type Tab struct {
-	send       chan []byte
-	returns    map[int]chan []byte
-	closed     chan struct{}
-	connection tabConnectionInfo
-	rw         sync.RWMutex
-	nextReqID  int
-	Events     tabEventHandlers
+	send                chan []byte
+	returns             map[int]chan []byte
+	closed              chan struct{}
+	connection          tabConnectionInfo
+	rw                  sync.RWMutex
+	nextReqID           int
+	Events              tabEventHandlers
+	networkDataReceived chan struct{}
 }
 
 /*
@@ -57,10 +58,11 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 	}
 
 	tab := &Tab{
-		send:       make(chan []byte),
-		returns:    make(map[int]chan []byte),
-		closed:     make(chan struct{}),
-		connection: tci,
+		send:                make(chan []byte),
+		returns:             make(map[int]chan []byte),
+		closed:              make(chan struct{}),
+		connection:          tci,
+		networkDataReceived: make(chan struct{}),
 	}
 
 	// response from chrome
@@ -126,6 +128,14 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 				Log("Inspector.detached: ev: %+v", ev)
 				close(tab.closed)
 			default:
+				if msg.Method == "Network.dataReceived" {
+					go func() {
+						select {
+						case tab.networkDataReceived <- struct{}{}:
+						case <-time.After(1 * time.Second):
+						}
+					}()
+				}
 				if err := tab.HandleEvent(msg.Method, msg.Params); err != nil {
 					// event was not handled so send return
 					ch := tab.getReq(msg.ID)
