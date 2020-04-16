@@ -96,6 +96,8 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 			}
 			switch msg.Method {
 			case "Inspector.detached":
+				// when a page is closed this event is fired
+				// we could check the reason but we just close the tab
 				var ev InspectorDetachedEvent
 				err := json.Unmarshal(msg.Params, &ev)
 				if err != nil {
