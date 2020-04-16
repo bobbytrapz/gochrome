@@ -136,7 +136,7 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 						}
 					}()
 				}
-				if err := tab.HandleEvent(msg.Method, msg.Params); err != nil {
+				if err := tab.HandleEvent(msg.Method, msg.Params); err == errEventNotHandled {
 					// event was not handled so send return
 					ch := tab.getReq(msg.ID)
 					// Log("[%d] channel (%+v)", msg.ID, ch)
