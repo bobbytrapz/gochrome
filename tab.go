@@ -75,21 +75,6 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 		Params json.RawMessage
 	}
 
-	type evPageLifecycle struct {
-		Name      string  `json:"name"`
-		Timestamp float64 `json:"timestamp"`
-		FrameID   string  `json:"frameId"`
-		LoaderID  string  `json:"loaderId"`
-	}
-
-	// when Page.close causes a target to close we get this
-	// so we treat it like an event
-	type evInspectorDetached struct {
-		Params struct {
-			Reason string `json:"reason"`
-		} `json:"params"`
-	}
-
 	// read
 	// handle events
 	b.wg.Add(1)
@@ -110,16 +95,8 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 				return
 			}
 			switch msg.Method {
-			case "Page.lifecycleEvent":
-				var ev evPageLifecycle
-				err := json.Unmarshal(msg.Params, &ev)
-				if err != nil {
-					Log("Page.lifecycleEvent: %s", err)
-					return
-				}
-				Log("Page.lifecycleEvent: ev: %+v", ev)
 			case "Inspector.detached":
-				var ev evInspectorDetached
+				var ev InspectorDetachedEvent
 				err := json.Unmarshal(msg.Params, &ev)
 				if err != nil {
 					Log("Inspector.detached: %s", err)
