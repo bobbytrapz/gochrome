@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/bobbytrapz/gochrome"
 )
@@ -53,6 +54,11 @@ func main() {
 	})
 
 	tab.Goto("http://golang.org/")
+
+	go func() {
+		tab.WaitForNetworkIdle(3 * time.Second)
+		cancel()
+	}()
 
 	// handle keyboard interrupt
 	sig := make(chan os.Signal, 1)
