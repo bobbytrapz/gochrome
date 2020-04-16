@@ -39,9 +39,9 @@ func (t *Tab) GetResponseBody(id NetworkRequestId) (string, error) {
 
 // HTTPResource is a resource the browser has fetched
 type HTTPResource struct {
-	Type    NetworkResourceType
-	Headers NetworkResponse
-	Body    string
+	Type     NetworkResourceType
+	Response NetworkResponse
+	Body     string
 }
 
 // OnResource passes the http response headers and body
@@ -87,8 +87,8 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 		for _, tt := range types {
 			if ev.Type == tt {
 				add(ev.RequestId, HTTPResource{
-					Type:    ev.Type,
-					Headers: ev.Response,
+					Type:     ev.Type,
+					Response: ev.Response,
 				})
 			}
 		}
@@ -103,9 +103,9 @@ func (t *Tab) OnResource(onResource func(res HTTPResource), types ...NetworkReso
 				fmt.Fprintf(os.Stderr, "Tab.OnResource: %v\n", err)
 			}
 			onResource(HTTPResource{
-				Type:    r.Type,
-				Headers: r.Headers,
-				Body:    body,
+				Type:     r.Type,
+				Response: r.Response,
+				Body:     body,
 			})
 		}
 	}

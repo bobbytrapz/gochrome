@@ -45,7 +45,7 @@ func main() {
 				if end > 100 {
 					end = 100
 				}
-				fmt.Printf("%s [Document]\n%s\n", res.Headers["url"], res.Body[:end])
+				fmt.Printf("%s [Document]\n%s\n", res.Response["url"], res.Body[:end])
 			}
 		}, "Document")
 		tab.SetUserAgent("Go/gochrome-test")
