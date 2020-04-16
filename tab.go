@@ -109,7 +109,7 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 					go func() {
 						select {
 						case tab.networkDataReceived <- struct{}{}:
-						case <-time.After(1 * time.Second):
+						case <-time.After(500 * time.Millisecond):
 						}
 					}()
 				}
