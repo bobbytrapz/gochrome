@@ -8,7 +8,7 @@ func (t *Tab) Evaluate(js string) (RuntimeEvaluateReturns, error) {
 	}
 
 	if r.Result != nil {
-		Log("Tab.Evaluate: type: %q description: %q", r.Result["type"], r.Result["description"])
+		Log("Tab.Evaluate: type: %q value: %q", r.Result["type"], r.Result["value"])
 	}
 
 	return r, err
