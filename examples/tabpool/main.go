@@ -31,7 +31,7 @@ func main() {
 	// we use StartFull so we can see what the browser is doing
 	// normally, we would want to use Start to run chrome headless
 	// ctx is passed to exec.CommandContext so cancel will exit the browser
-	// profileDir is "" so a temporary directory will be made for the chrome user profile
+	// userProfileDir is "" so a temporary directory will be made for the chrome user profile
 	// the port is used to connect to the Chrome DevTools
 	// we are given a *chrome.Tab, which is the first open tab
 	_, err := browser.StartFull(ctx, "", 44144)
