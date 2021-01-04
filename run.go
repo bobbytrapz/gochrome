@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+const (
+	TemporaryUserProfileDirectory = ""
+	DefaultPort                   = 44144
+)
+
 // WaitForOpen decides how long we wait for chrome to open
 var WaitForOpen = 20 * time.Second
 
@@ -35,7 +40,7 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 	var tmpDir string
 	var app string
 	var err error
-	if userProfileDir == "" {
+	if userProfileDir == TemporaryUserProfileDirectory {
 		tmpDir, err = ioutil.TempDir("", "gochrome-chrome-profile")
 		if err != nil {
 			panic(err)
@@ -69,6 +74,10 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 		}
 	case "windows":
 		// todo: find chrome on windows
+	}
+
+	if port == 0 {
+		port = DefaultPort
 	}
 
 	var opts []string
