@@ -173,10 +173,6 @@ func (b *Browser) NewTab(ctx context.Context) (*Tab, error) {
 		return nil, err
 	}
 
-	if b.UserAgent != "" {
-		tab.SetUserAgent(b.UserAgent)
-	}
-
 	return tab, nil
 }
 
@@ -188,6 +184,10 @@ func (b *Browser) addTab(tci tabConnectionInfo) (*Tab, error) {
 
 	Log("adding tab:\n%+v", tci)
 	b.tabs = append(b.tabs, tab)
+
+	if b.UserAgent != "" {
+		tab.SetUserAgent(b.UserAgent)
+	}
 
 	return tab, nil
 }
