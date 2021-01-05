@@ -110,7 +110,7 @@ var typeReplacer = strings.NewReplacer(
 	"number", "float64",
 	"any", "interface{}",
 	"boolean", "bool",
-	"binary", "[]byte",
+	"binary", "string",
 	".", "",
 )
 
