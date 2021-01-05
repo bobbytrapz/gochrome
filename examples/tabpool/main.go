@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/bobbytrapz/gochrome"
 )
@@ -47,20 +48,27 @@ func main() {
 	// create tab pool
 	// these are tabs we can reuse by grabbing and releasing them
 	N := 3
-	err = browser.NewTabPool(ctx, N)
+	tabPool, err := browser.NewTabPool(ctx, N)
+	if err != nil {
+		panic(err)
+	}
 
 	// have each tab visit a page
 	for i := 0; i < N; i++ {
 		// grab a free tab
 		// this will block if no tabs are free
-		tab := browser.GrabTab()
+		tab := tabPool.Grab()
 
 		// use the tab
 		_, err = tab.Goto("https://golang.org")
 
 		// release the tab when we are finished
-		browser.ReleaseTab(tab)
+		tabPool.Release(tab)
 	}
+
+	<-time.After(5 * time.Second)
+	tabPool.Wait()
+	tabPool.Close()
 
 	// handle keyboard interrupt
 	sig := make(chan os.Signal, 1)

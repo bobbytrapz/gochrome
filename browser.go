@@ -28,10 +28,6 @@ type Browser struct {
 	HTTPClient *http.Client
 	// chrome browser address
 	addr string
-	// open tabs
-	tabs []*Tab
-	// released tabs
-	released chan *Tab
 }
 
 // NewBrowser creates a new chrome browser
@@ -183,7 +179,6 @@ func (b *Browser) addTab(tci tabConnectionInfo) (*Tab, error) {
 	}
 
 	Log("adding tab:\n%+v", tci)
-	b.tabs = append(b.tabs, tab)
 
 	if b.UserAgent != "" {
 		tab.SetUserAgent(b.UserAgent)
@@ -198,15 +193,4 @@ func (b *Browser) PID() int {
 		panic("browser is not open")
 	}
 	return b.cmd.Process.Pid
-}
-
-// EachTab performs a function on each open tab
-// this may not work if tabs are closed
-// may want to look into a solution here
-// users probably will not want to close tabs at all
-// except when exiting the browser
-func (b *Browser) EachTab(tabfn func(index int, tab *Tab)) {
-	for n, t := range b.tabs {
-		tabfn(n, t)
-	}
 }

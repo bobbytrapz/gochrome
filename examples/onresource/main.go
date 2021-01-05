@@ -35,21 +35,18 @@ func main() {
 		Response gochrome.NetworkResponse
 	}
 
-	browser.EachTab(func(n int, tab *gochrome.Tab) {
-		fmt.Printf("[%d] Configure tab\n", n)
-		tab.OnResource(func(res gochrome.HTTPResource) {
-			// print some information about each document
-			// snip the body to 100 chars
-			if res.Type == "Document" {
-				end := len(res.Body)
-				if end > 100 {
-					end = 100
-				}
-				fmt.Printf("%s [Document]\n%s\n", res.Response["url"], res.Body[:end])
+	tab.OnResource(func(res gochrome.HTTPResource) {
+		// print some information about each document
+		// snip the body to 100 chars
+		if res.Type == "Document" {
+			end := len(res.Body)
+			if end > 100 {
+				end = 100
 			}
-		}, "Document")
-		tab.SetUserAgent("Go/gochrome-test")
-	})
+			fmt.Printf("%s [Document]\n%s\n", res.Response["url"], res.Body[:end])
+		}
+	}, "Document")
+	tab.SetUserAgent("Go/gochrome-test")
 
 	tab.Goto("http://golang.org/")
 
