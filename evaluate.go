@@ -1,7 +1,7 @@
 package gochrome
 
 func (t *Tab) Evaluate(js string) (RuntimeEvaluateReturns, error) {
-	r, err := t.RuntimeEvaluate(js, "", false, false, 0, false, false, true, true, false, 0, false, true)
+	r, err := t.RuntimeEvaluate(js, "", false, false, 0, false, false, true, true, false, 0.0, false, true, true)
 
 	if err != nil {
 		Log("Tab.Evaluate: error: %q", err)
