@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -55,19 +56,26 @@ func main() {
 
 	// have each tab visit a page
 	for i := 0; i < N; i++ {
+		tabNumber := i
+
 		// grab a free tab
 		// this will block if no tabs are free
 		tab := tabPool.Grab()
 
-		// use the tab
-		_, err = tab.Goto("https://golang.org")
+		go func() {
+			defer tabPool.Release(tab)
 
-		// release the tab when we are finished
-		tabPool.Release(tab)
+			// use the tab
+			_, err = tab.Goto("https://golang.org")
+			tab.WaitForNetworkIdle(5 * time.Second)
+			fmt.Printf("Tab %d done\n", tabNumber)
+		}()
 	}
 
-	<-time.After(5 * time.Second)
+	// wait for tabs to be released
 	tabPool.Wait()
+
+	fmt.Printf("Closing %d tabs\n", N)
 	tabPool.Close()
 
 	// handle keyboard interrupt
