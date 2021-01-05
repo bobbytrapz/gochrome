@@ -105,7 +105,13 @@ func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
 					return
 				}
 				Log("Inspector.detached: ev: %+v", ev)
-				close(tab.closed)
+				// FIX: race condition
+				// close(tab.closed)
+				select {
+				case tab.closed <- struct{}{}:
+				case <-time.After(500 * time.Millisecond):
+					Log("tab.close: timeout")
+				}
 			default:
 				if msg.Method == "Network.dataReceived" {
 					go func() {
