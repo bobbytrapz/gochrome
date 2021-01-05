@@ -45,7 +45,7 @@ func main() {
 	defer browser.Wait()
 
 	// navigate with our first tab
-	_, err = tab.PageNavigate("https://golang.org", "", "", "")
+	_, err = tab.PageNavigate("https://golang.org", "", "", "", "")
 	if err != nil {
 		panic(err)
 	}
