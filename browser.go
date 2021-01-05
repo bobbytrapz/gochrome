@@ -38,7 +38,7 @@ type Browser struct {
 // does not start a chrome process
 func NewBrowser() *Browser {
 	return &Browser{
-		UserAgent: "Go/gochrome",
+		UserAgent: "",
 		HTTPClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
@@ -171,6 +171,10 @@ func (b *Browser) NewTab(ctx context.Context) (*Tab, error) {
 	tab, err := b.addTab(tci)
 	if err != nil {
 		return nil, err
+	}
+
+	if b.UserAgent != "" {
+		tab.SetUserAgent(b.UserAgent)
 	}
 
 	return tab, nil
