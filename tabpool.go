@@ -11,7 +11,7 @@ type TabPool struct {
 	tabs []*Tab
 	// released tabs
 	released chan *Tab
-	wg       sync.WaitGroup
+	wg       *sync.WaitGroup
 }
 
 // NewTabPool create a new pool of N tabs
@@ -19,6 +19,7 @@ func (b *Browser) NewTabPool(ctx context.Context, N int) (tabPool TabPool, err e
 	tabPool = TabPool{
 		tabs:     make([]*Tab, N),
 		released: make(chan *Tab, N),
+		wg:       &sync.WaitGroup{},
 	}
 	for i := 0; i < N; i++ {
 		tab, err := b.NewTab(ctx)
