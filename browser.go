@@ -72,7 +72,7 @@ func NewBrowser() *Browser {
 // and sets given flags
 func NewBrowserWithFlags(flags []string) *Browser {
 	return &Browser{
-		UserAgent: "Go/gochrome",
+		UserAgent: "",
 		HTTPClient: &http.Client{
 			Timeout: 60 * time.Second,
 		},
