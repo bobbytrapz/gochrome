@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -38,7 +39,6 @@ func (b *Browser) StartFull(ctx context.Context, userProfileDir string, port int
 
 func (b *Browser) start(ctx context.Context, userProfileDir string, port int, shouldHeadless bool) (*Tab, error) {
 	var tmpDir string
-	var app string
 	var err error
 	if userProfileDir == TemporaryUserProfileDirectory {
 		tmpDir, err = ioutil.TempDir("", "gochrome-chrome-profile")
@@ -53,27 +53,6 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 			return nil, fmt.Errorf("os.UserHomeDir: %w", err)
 		}
 		userProfileDir = filepath.Join(home, userProfileDir[2:])
-	}
-	switch runtime.GOOS {
-	case "darwin":
-		path := "/Applications/Google Chrome.app"
-		if s, err := os.Stat(path); err == nil && s.IsDir() {
-			app = fmt.Sprintf("open %s --args", path)
-		}
-	case "linux":
-		names := []string{
-			"chromium-browser",
-			"chromium",
-			"google-chrome",
-		}
-		for _, name := range names {
-			if _, err := exec.LookPath(name); err == nil {
-				app = name
-				break
-			}
-		}
-	case "windows":
-		// todo: find chrome on windows
 	}
 
 	if port == 0 {
@@ -96,39 +75,63 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 	// defaults
 	opts = append(opts, b.Flags...)
 	opts = append(opts,
+		"--new-window",
 		"--window-size=1280,1696",
 		fmt.Sprintf("--user-data-dir=%s", userProfileDir),
 		fmt.Sprintf("--remote-debugging-port=%d", port),
 		"about:blank",
 	)
 
-	if app == "" {
-		return nil, fmt.Errorf("could not find chrome")
+	switch runtime.GOOS {
+	case "darwin":
+		path := "/Applications/Google Chrome.app"
+		if s, err := os.Stat(path); err == nil && s.IsDir() {
+			args := []string{
+				"--new", "--fresh", "--wait-apps",
+				"-a", path, "--args",
+			}
+			args = append(args, opts...)
+			b.cmd = exec.CommandContext(ctx, "open", args...)
+		} else {
+			return nil, fmt.Errorf("we checked for chrome at %q and got an error: %w", path, err)
+		}
+	case "linux":
+		names := []string{
+			"chromium-browser",
+			"chromium",
+			"google-chrome",
+		}
+		var app string
+		for _, name := range names {
+			if _, err := exec.LookPath(name); err == nil {
+				app = name
+				break
+			}
+		}
+		b.cmd = exec.CommandContext(ctx, app, opts...)
+	case "windows":
+		// todo: find chrome on windows; modify flags for windows
+		return nil, fmt.Errorf("gochrome does not support Windows.")
 	}
-	b.cmd = exec.CommandContext(ctx, app, opts...)
 
 	if err = b.cmd.Start(); err != nil {
 		return nil, fmt.Errorf("could not start chrome: %w", err)
 	}
 	Log("%s (%d) profile=%s", b.cmd.Path, b.cmd.Process.Pid, userProfileDir)
 
-	// monitor process
-	b.wg.Add(1)
-	b.exit = make(chan struct{}, 1)
-	go func() {
-		defer b.wg.Done()
-		b.cmd.Wait()
-		close(b.exit)
-		if tmpDir != "" {
-			Log("remove: %s", tmpDir)
-			os.RemoveAll(tmpDir)
-		}
-	}()
+	b.monitorBrowserProcess()
 
 	// handle exit
 	b.wg.Add(1)
 	go func() {
 		defer b.wg.Done()
+		defer func() {
+			if tmpDir != "" {
+				// remove temporary directory
+				Log("remove: %s", tmpDir)
+				os.RemoveAll(tmpDir)
+			}
+		}()
 		select {
 		case <-ctx.Done():
 			Log("cancel: %s", ctx.Err())
@@ -151,6 +154,19 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 		return nil, err
 	}
 
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				Log("close browser")
+				_, err := tab.BrowserClose()
+				if err != nil {
+					Log("while closing browser: %s", err)
+				}
+			}
+		}
+	}()
+
 	return tab, nil
 }
 
@@ -169,7 +185,7 @@ func (b *Browser) connect(ctx context.Context, addr string) error {
 			Log("timeout")
 			return fmt.Errorf("timeout")
 		default:
-			res, err := b.fetch(ctx, u.String())
+			res, err := b.performRequest(ctx, http.MethodGet, u.String())
 			if err == nil {
 				res.Body.Close()
 				goto connected
@@ -184,7 +200,7 @@ connected:
 }
 
 func (b *Browser) connectFirstTab(ctx context.Context) (*Tab, error) {
-	res, err := b.get(ctx, "/json")
+	res, err := b.http(ctx, http.MethodGet, "/json")
 	if err != nil {
 		return nil, err
 	}

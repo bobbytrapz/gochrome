@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -104,13 +106,13 @@ func (b *Browser) newRequest(ctx context.Context, host string, method string, ur
 	return
 }
 
-func (b *Browser) fetch(ctx context.Context, link string) (*http.Response, error) {
+func (b *Browser) performRequest(ctx context.Context, method string, link string) (*http.Response, error) {
 	u, err := url.ParseRequestURI(link)
 	if err != nil {
 		panic("invalid url" + link)
 	}
 
-	req, err := b.newRequest(ctx, u.Host, "GET", link)
+	req, err := b.newRequest(ctx, u.Host, method, link)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +125,8 @@ func (b *Browser) fetch(ctx context.Context, link string) (*http.Response, error
 	return res, nil
 }
 
-// get a response from the browser
-func (b *Browser) get(ctx context.Context, path string) (res *http.Response, err error) {
+// use the browser http-based api
+func (b *Browser) http(ctx context.Context, method string, path string) (res *http.Response, err error) {
 	u := url.URL{Scheme: "http", Host: b.addr, Path: path}
 
 	timeout := time.After(WaitForTabConnect)
@@ -136,7 +138,7 @@ func (b *Browser) get(ctx context.Context, path string) (res *http.Response, err
 			Log("timeout")
 			return nil, fmt.Errorf("timeout")
 		default:
-			res, err = b.fetch(ctx, u.String())
+			res, err = b.performRequest(ctx, method, u.String())
 			if err == nil {
 				goto ok
 			} else {
@@ -152,14 +154,19 @@ ok:
 
 // NewTab opens a new tab
 func (b *Browser) NewTab(ctx context.Context) (*Tab, error) {
-	res, err := b.get(ctx, "/json/new")
+	res, err := b.http(ctx, http.MethodPut, "/json/new")
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
 	}
 	defer res.Body.Close()
 
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("io.ReadAll: %w", err)
+	}
+
 	var tci tabConnectionInfo
-	err = json.NewDecoder(res.Body).Decode(&tci)
+	err = json.NewDecoder(strings.NewReader(string(data))).Decode(&tci)
 	if err != nil {
 		return nil, fmt.Errorf("json.NewDecoder: %w", err)
 	}

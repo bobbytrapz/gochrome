@@ -31,10 +31,11 @@ func main() {
 	// we use StartFull so we can see what the browser is doing
 	// normally, we would want to use Start to run chrome headless
 	// ctx is passed to exec.CommandContext so cancel will exit the browser
-	// userProfileDir is "" so a temporary directory will be made for the chrome user profile
+	// userProfileDir is set so that a temporary directory will be made for the chrome user profile
+	// the temporary directory is removed when the browser closes
 	// the port is used to connect to the Chrome DevTools
 	// we are given a *chrome.Tab, which is the first open tab
-	tab, err := browser.StartFull(ctx, "", 44144)
+	tab, err := browser.StartFull(ctx, gochrome.TemporaryUserProfileDirectory, gochrome.DefaultPort)
 	if err != nil {
 		panic(err)
 	}
@@ -45,7 +46,7 @@ func main() {
 	defer browser.Wait()
 
 	// navigate with our first tab
-	_, err = tab.PageNavigate("https://golang.org", "", "", "", "")
+	_, err = tab.Goto("https://go.dev")
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +61,7 @@ func main() {
 
 	// navigate with that new tab
 	// afterwards, there should be two pages open in the browser
-	url := "https://go.dev"
+	url := "https://pkg.go.dev"
 	_, err = newTab.Goto(url)
 	if err != nil {
 		panic(err)
@@ -74,7 +75,6 @@ func main() {
 		select {
 		case <-sig:
 			// ctrl+c will shut down the browser
-			signal.Stop(sig)
 			cancel()
 		case <-ctx.Done():
 			return

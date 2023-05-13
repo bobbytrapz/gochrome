@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 //go:generate go run gen.go
@@ -105,7 +106,7 @@ type Property struct {
 
 // GetProtocol from chrome
 func (b *Browser) GetProtocol() (protocol Protocol) {
-	res, err := b.get(context.TODO(), "/json/protocol")
+	res, err := b.http(context.TODO(), http.MethodGet, "/json/protocol")
 	if err != nil {
 		panic(err)
 	}
