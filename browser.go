@@ -30,6 +30,8 @@ type Browser struct {
 	HTTPClient *http.Client
 	// chrome browser address
 	addr string
+	// mutex so we cannot not add more than one tab at a time
+	newTab sync.Mutex
 }
 
 // NewBrowser creates a new chrome browser
@@ -154,6 +156,9 @@ ok:
 
 // NewTab opens a new tab
 func (b *Browser) NewTab(ctx context.Context) (*Tab, error) {
+	b.newTab.Lock()
+	defer b.newTab.Unlock()
+
 	res, err := b.http(ctx, http.MethodPut, "/json/new")
 	if err != nil {
 		return nil, fmt.Errorf("get: %w", err)
