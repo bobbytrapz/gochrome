@@ -201,3 +201,16 @@ func (b *Browser) PID() int {
 	}
 	return b.cmd.Process.Pid
 }
+
+// Close the browser.
+func (b *Browser) Close() error {
+	tab, err := b.NewTab(context.Background())
+	if err != nil {
+		return fmt.Errorf("Browser.NewTab: %w", err)
+	}
+	_, err = tab.BrowserClose()
+	if err != nil {
+		return fmt.Errorf("Tab.BrowserClose: %w", err)
+	}
+	return nil
+}

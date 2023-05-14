@@ -159,7 +159,7 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 			select {
 			case <-ctx.Done():
 				Log("close browser")
-				_, err := tab.BrowserClose()
+				err := b.Close()
 				if err != nil {
 					Log("while closing browser: %s", err)
 				}
