@@ -34,6 +34,7 @@ func (b *Browser) NewTabPool(ctx context.Context, N int) (tabPool *TabPool, err 
 
 // Grab from pool
 // blocks if no tabs are available
+// returns nil is pool was closed
 func (tp *TabPool) Grab() *Tab {
 	tp.wg.Add(1)
 	tab := <-tp.released

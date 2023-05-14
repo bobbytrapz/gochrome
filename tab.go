@@ -185,7 +185,7 @@ func (t *Tab) SendCommand(args map[string]interface{}) chan []byte {
 	case t.send <- data:
 		// Log("send: %s", data)
 	case <-time.After(500 * time.Millisecond):
-		Log("send: timeout")
+		Log("send: timeout: args=%+v", args)
 	}
 
 	return ch
