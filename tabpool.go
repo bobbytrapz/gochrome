@@ -15,8 +15,8 @@ type TabPool struct {
 }
 
 // NewTabPool create a new pool of N tabs
-func (b *Browser) NewTabPool(ctx context.Context, N int) (tabPool TabPool, err error) {
-	tabPool = TabPool{
+func (b *Browser) NewTabPool(ctx context.Context, N int) (tabPool *TabPool, err error) {
+	tabPool = &TabPool{
 		tabs:     make([]*Tab, N),
 		released: make(chan *Tab, N),
 		wg:       &sync.WaitGroup{},

@@ -66,7 +66,7 @@ func main() {
 			defer tabPool.Release(tab)
 
 			// use the tab
-			_, err = tab.Goto("https://golang.org")
+			_, err = tab.Goto("https://go.dev")
 			tab.WaitForNetworkIdle(5 * time.Second)
 			fmt.Printf("Tab %d done\n", tabNumber)
 		}()

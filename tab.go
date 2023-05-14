@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"sync"
 	"time"
 
@@ -51,8 +53,11 @@ func (t *Tab) WaitForLoad(maxWait time.Duration) {
 }
 
 func (b *Browser) connectTab(tci tabConnectionInfo) (*Tab, error) {
-	conn, _, err := websocket.DefaultDialer.Dial(tci.WebSocketDebuggerURL, nil)
+	conn, res, err := websocket.DefaultDialer.Dial(tci.WebSocketDebuggerURL, nil)
 	if err != nil {
+		var buf []byte
+		_, _ = io.ReadFull(res.Body, buf)
+		log.Printf("websocket.Dial: response body:\n%s\n\n", buf)
 		err = fmt.Errorf("websocket.Dial: %w", err)
 		return nil, err
 	}

@@ -163,6 +163,8 @@ func (b *Browser) start(ctx context.Context, userProfileDir string, port int, sh
 				if err != nil {
 					Log("while closing browser: %s", err)
 				}
+				close(b.exit)
+				return
 			}
 		}
 	}()
