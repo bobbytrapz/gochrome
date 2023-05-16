@@ -13,18 +13,20 @@ var (
 )
 
 // Extract data from a page.
-// url: page url
+// url: page url, leave empty to stay on the same page
 // timeout: how long before we give up
 // delay: how long between attempts
 // js: code to evaluate on the page
 // check: if true, extraction is a success
 // Returns the value extracted from the js code.
 func (t *Tab) Extract(url string, timeout time.Duration, delay time.Duration, js string, check ExtractCheck) (any, error) {
-	_, err := t.Goto(url)
-	if err != nil {
-		return nil, err
+	if len(url) > 0 {
+		_, err := t.Goto(url)
+		if err != nil {
+			return nil, err
+		}
+		t.WaitForNetworkIdle(1 * time.Second)
 	}
-	t.WaitForNetworkIdle(1 * time.Second)
 
 	to := time.NewTimer(timeout)
 	for {
